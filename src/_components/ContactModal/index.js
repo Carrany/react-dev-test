@@ -18,7 +18,6 @@ export const ContactModal = ({
 
 }) => {
 
-    const [total_elements, setTotalElements] = useState(20)
     const [isLoading, setLoading] = useState(false);
     const [searchParams, setSearchParams] = useState({ page: 1 })
     const [scroll, setScroll] = useState(false)
@@ -28,6 +27,7 @@ export const ContactModal = ({
 
     const dispatch = useDispatch();
     const selectContacts = state => state.contact.contacts
+    const selectTotal = state => state.contact.total
 
     const selectEvenContacts = createSelector(
         [selectContacts],
@@ -36,6 +36,7 @@ export const ContactModal = ({
 
     const contacts = useSelector(selectContacts);
     const evenContacts = useSelector(selectEvenContacts);
+    const total = useSelector(selectTotal)
 
     // Check if scroll is at the bottom
     const onScroll = (tableContent) => {
@@ -71,12 +72,11 @@ export const ContactModal = ({
             }
 
             if (scroll) {
-                dispatch(contactActions.appendNewContacts(nContacts))
+                dispatch(contactActions.appendNewContacts(nContacts, data?.total))
             } else {
-                dispatch(contactActions.newContactList(nContacts))
+                dispatch(contactActions.newContactList(nContacts, data?.total))
 
             }
-            setTotalElements(data?.total)
             setLoading(false)
             setScroll(false)
             setIsBottom(false);
@@ -98,7 +98,7 @@ export const ContactModal = ({
     const handleInfiniteOnLoad = () => {
 
         setScroll(true)
-        if (contacts.length === total_elements)
+        if (contacts.length === total)
             return (
                 setScroll(false)
             )
@@ -118,7 +118,7 @@ export const ContactModal = ({
         }
         // Scroll to top to avoid scrollbar being at the bottom
         // Happens when contacts length is less than the previous
-        dispatch(contactActions.newContactList([]))
+        dispatch(contactActions.newContactList([], 0))
         setSearchParams(params)
     }, 500)
 
