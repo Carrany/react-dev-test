@@ -2,21 +2,25 @@ import { APPEND_NEW_CONTACTS, NEW_CONTACT_LIST } from '_constants/actionTypes';
 
 
 const initialState = {
-    contacts: []
+    contacts: [],
+    total: 0
 }
 
 function contactsReducer(state = initialState, { type, payload }) {
 
     switch (type) {
         case NEW_CONTACT_LIST:
+
             return {
                 ...state,
-                contacts: payload
+                contacts: payload?.data,
+                total: payload?.count
             }
         case APPEND_NEW_CONTACTS:
             return {
                 ...state,
-                contacts: [...state.contacts, ...payload]
+                contacts: [...state.contacts, ...payload?.data],
+                total: payload?.count
             }
 
 
