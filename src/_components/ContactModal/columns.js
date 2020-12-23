@@ -23,6 +23,5 @@ export const contactColumns = [
         title: "Country",
         dataIndex: "country",
         key: "country",
-        render: (text) => text.iso
     },
 ]
