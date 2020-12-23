@@ -118,10 +118,8 @@ export const ContactModal = ({
         }
         // Scroll to top to avoid scrollbar being at the bottom
         // Happens when contacts length is less than the previous
-        var tableContent = document.querySelector('.scroll-bar')
-        tableContent.scrollTo(0, 0);
+        dispatch(contactActions.newContactList([]))
         setSearchParams(params)
-
     }, 500)
 
     const navigate = (url) => {
@@ -165,7 +163,7 @@ export const ContactModal = ({
 
                     <div >
                         {isLoading && (<TableLoading />)}
-                        <Scrollbars className="scroll-bar" style={{ height: 350 }} onScrollFrame={onScroll}>
+                        <Scrollbars id="scroll-bar" style={{ height: 350 }} onScrollFrame={onScroll}>
                             <table className="table" id="table-scroll">
                                 <thead className="thead-light" >
                                     <tr>
