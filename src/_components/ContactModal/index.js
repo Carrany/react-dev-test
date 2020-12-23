@@ -1,10 +1,14 @@
-import { Button, Input, message, Modal, PageHeader, Row, Table } from "antd"
 import { useEffect, useState } from "react"
 import styled from "styled-components";
 import { contactService } from "_services";
 import { contactColumns } from "./columns";
-import { throttle, debounce } from 'lodash';
-import Checkbox from "antd/lib/checkbox/Checkbox";
+import { debounce } from 'lodash';
+import { Scrollbars } from 'react-custom-scrollbars';
+import { TableLoading } from "_components/Loading";
+import { useDispatch, useSelector } from "react-redux";
+import { contactActions } from "_actions";
+import { createSelector } from 'reselect';
+import { AdditionalDetailsModal } from "./AdditionalDetailsModal";
 
 export const ContactModal = ({
     showAllContacts = false,
@@ -14,32 +18,31 @@ export const ContactModal = ({
 
 }) => {
 
-    const [contacts, setContacts] = useState([]);
     const [total_elements, setTotalElements] = useState(20)
     const [isLoading, setLoading] = useState(false);
     const [searchParams, setSearchParams] = useState({ page: 1 })
     const [scroll, setScroll] = useState(false)
     const [showEven, setShowEven] = useState(false);
-    const [evenContacts, setEvenContacts] = useState([]);
-    const [isBottom, setIsBottom] = useState(false)
+    const [isBottom, setIsBottom] = useState(false);
+    const [selectedRecord, setSelectedRecord] = useState(null);
 
+    const dispatch = useDispatch();
+    const selectContacts = state => state.contact.contacts
 
-    useEffect(() => {
-        var tableContent = document.querySelector('.table-scroll .ant-table-body')
-        tableContent.addEventListener('scroll', throttle(() => onScroll(tableContent), 300))
-        return () => {
-            tableContent.removeEventListener('scroll', () => onScroll(tableContent))
-        }
-    }, [])
+    const selectEvenContacts = createSelector(
+        [selectContacts],
+        (allContacts) => allContacts.filter(c => c.id % 2 === 0)
+    )
+
+    const contacts = useSelector(selectContacts);
+    const evenContacts = useSelector(selectEvenContacts);
 
     // Check if scroll is at the bottom
     const onScroll = (tableContent) => {
-
-        const bottom = tableContent.scrollTop === (tableContent.scrollHeight - tableContent.offsetHeight);
+        const bottom = tableContent.scrollTop === (tableContent.scrollHeight - tableContent.clientHeight);
         if (bottom) {
             setIsBottom(true);
         }
-
     }
 
 
@@ -47,7 +50,6 @@ export const ContactModal = ({
         let countryId = showAllContacts ? null :
             showUSContactsOnly && !showAllContacts ? 226
                 : null
-
         let params = {
             ...searchParams,
             companyId: 171,
@@ -65,12 +67,15 @@ export const ContactModal = ({
             let content = (data?.contacts || [])
             let nContacts = [];
             for (const contact in content) {
-
                 nContacts.push(content[contact])
             }
 
+            if (scroll) {
+                dispatch(contactActions.appendNewContacts(nContacts))
+            } else {
+                dispatch(contactActions.newContactList(nContacts))
 
-            setContacts([...(scroll ? contacts : []), ...nContacts])
+            }
             setTotalElements(data?.total)
             setLoading(false)
             setScroll(false)
@@ -83,23 +88,6 @@ export const ContactModal = ({
         }
     }
 
-    // Toggle between even and all contacts without affecting the initial contact array
-    useEffect(() => {
-        handleEven(showEven, contacts)
-    }, [showEven, contacts])
-
-    const handleEven = (nShowEven, nContacts) => {
-        if (!nShowEven) return setEvenContacts([])
-        let data = [];
-        [...nContacts].forEach(c => {
-            if (c.id % 2 === 0) {
-                data.push(c)
-            }
-
-        })
-        setEvenContacts(data);
-    }
-
     useEffect(() => {
         if (!isBottom) return
         handleInfiniteOnLoad()
@@ -107,134 +95,122 @@ export const ContactModal = ({
     }, [isBottom])
 
     // Perform infinite scroll
-
     const handleInfiniteOnLoad = () => {
 
         setScroll(true)
-
         if (contacts.length === total_elements)
             return (
-                message.info("All contacts loaded"),
                 setScroll(false)
             )
-
-
         let params = {
             ...searchParams,
             page: searchParams.page + 1
         }
-
         setSearchParams(params)
-
     }
-
 
     // Search api via query
     const handleSearch = debounce((value) => {
-
         let params = {
             ...searchParams,
             page: 1,
             query: value || null
         }
-
         // Scroll to top to avoid scrollbar being at the bottom
         // Happens when contacts length is less than the previous
-
-        var tableContent = document.querySelector('.table-scroll .ant-table-body')
+        var tableContent = document.querySelector('.scroll-bar')
         tableContent.scrollTo(0, 0);
-
         setSearchParams(params)
 
     }, 500)
-
-
-    // Modal C to show extra contact details
-
-    const showContactDetails = (record) => {
-        Modal.info({
-            content: <div style={{ fontSize: 16, fontWeight: 600 }}>
-
-                {record?.email ?
-                    `${(record?.first_name || record?.last_name || "Unknown")}'s email address is ${record?.email}`
-                    : `${(record?.first_name || record?.last_name || "Unknown")} has no email address`
-                }
-            </div>
-        })
-    }
-
-
 
     const navigate = (url) => {
         props.history.push(url)
     }
 
-
-
     return (
-        <Modal
-            visible={true}
-            width={700}
-            closable={false}
-            style={{ top: 30 }}
-            footer={
-                <div>
-                    <span style={{ float: 'left' }}>Page: {searchParams?.page}</span>
-                    <Checkbox checked={showEven} onChange={(e) => setShowEven(e.target.checked)}>Only even</Checkbox>
+        <div className="modal show d-block" tabIndex="-1" style={{ background: "grey" }}>
+            <div className="modal-dialog" style={{ maxWidth: 700 }}>
+                <AdditionalDetailsModal record={selectedRecord} />
+                <div className="modal-content" style={{ padding: 16 }}>
+                    <div className="container">
+                        <div className="row">
+                            <StyledNavButton
+                                className="btn btn-primary"
+                                type="button"
+                                onClick={() => navigate("/all-contacts")}
+                                color="#46139f"
+                            >All Contacts</StyledNavButton>
+
+                            <StyledNavButton
+                                className="btn btn-primary"
+                                type="button"
+                                onClick={() => navigate("/us-contacts")}
+                                color="#ff7f50"
+                            >US Contacts</StyledNavButton>
+
+                            <StyledNavButton
+                                className="btn"
+                                type="button"
+                                onClick={() => navigate("/")}
+                                style={{ right: 25, position: "absolute", borderColor: "#46139f" }}
+                            >Close</StyledNavButton>
+                        </div>
+                    </div>
+
+                    <StyledPageHeader >{modalTitle}</StyledPageHeader>
+
+                    <input type="text" className="form-control" placeholder="Search by name or phone number" onChange={(e) => handleSearch(e.target.value)} />
+                    <br />
+
+                    <div >
+                        {isLoading && (<TableLoading />)}
+                        <Scrollbars className="scroll-bar" style={{ height: 350 }} onScrollFrame={onScroll}>
+                            <table className="table" id="table-scroll">
+                                <thead className="thead-light" >
+                                    <tr>
+                                        {contactColumns.map(col =>
+                                            <th key={col.key}>{col.title}</th>
+                                        )}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(showEven ? evenContacts : contacts).map(contact =>
+                                        <tr key={contact?.id} onClick={() => setSelectedRecord(contact)}>
+                                            <td>{contact?.id}</td>
+                                            <td>{contact?.first_name}</td>
+                                            <td>{contact?.last_name}</td>
+                                            <td>{contact?.phone_number}</td>
+                                            <td>{contact?.country?.iso}</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </Scrollbars>
+                    </div>
+
+                    <div className="modal-footer">
+                        <span style={{ marginRight: 480 }}>Page: {searchParams?.page}</span>
+                        <div className="form-check">
+                            <label className="form-check-label">
+                                <input type="checkbox" className="form-check-input" checked={showEven} onChange={(e) => setShowEven(e.target.checked)} />Only Even
+                        </label>
+                        </div>
+                    </div>
+
                 </div>
-            }
-        >
-
-            <Row >
-                <StyledNavButton
-                    onClick={() => navigate("/all-contacts")}
-                    type="primary"
-                    color="#46139f"
-
-                >All Contacts</StyledNavButton>
-
-                <StyledNavButton
-                    type="primary"
-                    onClick={() => navigate("/us-contacts")}
-                    color="#ff7f50"
-                >US Contacts</StyledNavButton>
-
-                <StyledNavButton
-                    onClick={() => navigate("/")}
-                    style={{ right: 25, position: "absolute", borderColor: "#46139f" }}
-                    type="default"
-                >Close</StyledNavButton>
-            </Row>
-            <PageHeader style={{ paddingBottom: 5, paddingTop: 5 }} title={modalTitle} />
-
-            <Input.Search placeholder="Search by name or phone number" onChange={(e) => handleSearch(e.target.value)} />
-            <br />
-            <br />
-
-
-            <Table
-                className="table-scroll"
-                columns={contactColumns}
-                dataSource={showEven ? evenContacts : contacts}
-                size="small"
-                loading={isLoading}
-                rowKey={data => data.id}
-                pagination={false}
-                scroll={{ y: 300, scrollToFirstRowOnChange: false }}
-                onRow={(record) => {
-                    return {
-                        onClick: () => showContactDetails(record)
-                    }
-                }}
-            />
-
-
-        </Modal>
+            </div>
+        </div >
     )
 }
 
-
-const StyledNavButton = styled(Button)`
+const StyledNavButton = styled.button`
  margin-left: 10px;
  background:${props => props.color}
+    `
+const StyledPageHeader = styled.div`
+padding-bottom: 5px;
+padding-top: 5px;
+font-weight: 600;
+font-size: 20px;
     `

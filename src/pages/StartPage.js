@@ -1,11 +1,6 @@
-import { Button } from 'antd';
 import React from 'react'
 
-
 const StartPage = (props) => {
-
-
-
     return (
         <div style={{
             position: "fixed",
@@ -14,22 +9,24 @@ const StartPage = (props) => {
             marginTop: "-50px",
             marginLeft: "-50px",
         }}>
-            <div >
-                <Button
-                    onClick={() => props.history.push("/all-contacts")}
-                    type="primary"
+            <div>
+                <button
                     style={{ background: "#46139f" }}
-                >Button A
-                </Button>
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={() => props.history.push("/all-contacts")}
+                >Button A</button>
 
             </div>
             <br />
             <div>
-                <Button 
-                onClick={() => props.history.push("/us-contacts")} 
-                type="primary"
-                style={{ background: "#ff7f50" }}
-                >Button B</Button>
+                <button
+                    style={{ background: "#ff7f50" }}
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={() => props.history.push("/us-contacts")}
+                >Button A</button>
+
             </div>
 
         </div >
